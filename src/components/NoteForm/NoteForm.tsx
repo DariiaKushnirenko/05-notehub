@@ -35,6 +35,9 @@ export default function NoteForm({onClose }: NoteFormProps) {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       onClose();
     },
+    onError: (error) => {
+      console.error("Note creation failed:", error);
+    },
   });
 
   const initialValues: NoteFormValues = {

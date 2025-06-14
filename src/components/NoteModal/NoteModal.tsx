@@ -1,16 +1,14 @@
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
 import css from "./NoteModal.module.css";
-import type { Note } from "../../types/note";
 import NoteForm from "../NoteForm/NoteForm";
 
-
 interface NoteModalProps {
-  note?: Note;
+  onSuccess: () => void;
   onClose: () => void;
 }
 
-export default function NoteModal({onClose }: NoteModalProps) {
+export default function NoteModal({ onClose }: NoteModalProps) {
   const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       onClose();
@@ -51,9 +49,6 @@ export default function NoteModal({onClose }: NoteModalProps) {
         <NoteForm onClose={onClose} />
       </div>
     </div>,
-   document.body
+    document.body
   );
 }
-
-
-
