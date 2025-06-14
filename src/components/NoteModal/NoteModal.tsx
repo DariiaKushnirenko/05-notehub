@@ -4,7 +4,6 @@ import css from "./NoteModal.module.css";
 import NoteForm from "../NoteForm/NoteForm";
 
 interface NoteModalProps {
-  onSuccess: () => void;
   onClose: () => void;
 }
 

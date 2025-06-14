@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState,  } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 
@@ -16,7 +16,7 @@ export default function App() {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const activeSearch = searchTerm.trim() === "" ? "" : debouncedSearchTerm;
+  const activeSearch = debouncedSearchTerm.trim();
 
   const queryClient = useQueryClient();
 
@@ -26,7 +26,7 @@ export default function App() {
   };
 
   const { data, isLoading, isError } = useQuery<NotesResponse, Error>({
-    queryKey: ['notes', currentPage, activeSearch], 
+    queryKey: ['notes', activeSearch, currentPage], 
     queryFn: () => fetchNotes(activeSearch, currentPage),
     placeholderData: keepPreviousData,
     enabled: true, 
@@ -45,10 +45,6 @@ export default function App() {
     deleteMutation.mutate(id);
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchTerm]);
-
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
@@ -57,7 +53,7 @@ export default function App() {
           <Pagination
             totalPages={data.totalPages}
             currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
+            onPageChange={setCurrentPage}
            
           />
         )}
@@ -67,16 +63,8 @@ export default function App() {
       </header>
 
       {isModalOpen && (
-        <NoteModal
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={() => {
-            setIsModalOpen(false);
-            queryClient.invalidateQueries({
-              queryKey: ["notes", currentPage, debouncedSearchTerm],
-            });
-          }}
-        />
-      )}
+  <NoteModal onClose={() => setIsModalOpen(false)} />
+)}
 
       {isLoading && <p>Loading...</p>}
       {isError && <p>Request failed</p>}

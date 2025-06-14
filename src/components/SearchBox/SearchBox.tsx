@@ -12,7 +12,7 @@ export default function SearchBox({ value, onChange }: SearchBoxProps) {
       type="text"
       placeholder="Search notes"
       value={value}          
-      onChange={(e) => onChange(e.target.value.trim())} 
+      onChange={(e) => onChange(e.target.value)}
     />
   );
 }
