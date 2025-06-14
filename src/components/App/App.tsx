@@ -1,64 +1,87 @@
-import { useState } from "react";
-import SearchBar from "../SearchBar/SearchBar";
-import MovieGrid from "../MovieGrid/MovieGrid";
-import MovieModal from "../MovieModal/MovieModal";
-import Loader from "../Loader/Loader";
-import ErrorMessage from "../ErrorMessage/ErrorMessage";
-import { fetchMovies } from "../../services/movieService";
-import type { Movie } from "../../types/movie";
-import toast from "react-hot-toast";
-import { Toaster } from "react-hot-toast";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
+
+import { fetchNotes, deleteNote } from "../../services/noteService";
+import SearchBox from "../SearchBox/SearchBox";
+import NoteList from "../NoteList/NoteList";
+import Pagination from "../Pagination/Pagination";
+import NoteModal from "../NoteModal/NoteModal";
+
+import css from "./App.module.css";
+import type { Note } from "../../types/note";
 
 export default function App() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const perPage = 12;
 
-  const handleSearch = async (query: string) => {
-    const trimmedQuery = query.trim();
-    if (trimmedQuery === "") {
-      toast.error("Please enter a search query.");
-      return;
-    }
-    try {
-      setIsLoading(true);
-      setIsError(false);
-      const results = await fetchMovies(trimmedQuery);
-      setMovies(results);
-      if (results.length === 0) {
-        toast.error("No movies found for your request:(");
-      }
-    } catch {
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
+  const queryClient = useQueryClient();
+
+  const {
+    data,
+    isLoading,
+    isError,
+  } = useQuery<{ notes: Note[]; totalPages: number }, Error>({
+    queryKey: ["notes", currentPage, debouncedSearchTerm],
+    queryFn: () => fetchNotes(currentPage, perPage, debouncedSearchTerm),
+    keepPreviousData: true,
+  });
+
+  
+  const deleteMutation = useMutation({
+    mutationFn: deleteNote,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["notes", currentPage, debouncedSearchTerm],
+      });
+    },
+  });
+
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(id);
   };
 
-  const handleSelectMovie = (movie: Movie) => {
-    setSelectedMovie(movie);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedMovie(null);
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
   return (
-    <div>
-      <SearchBar onSubmit={handleSearch} />
+    <div className={css.app}>
+      <header className={css.toolbar}>
+        <SearchBox value={searchTerm} onChange={setSearchTerm} />
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
+          Create note +
+        </button>
+      </header>
 
-      {isLoading && <Loader />}
-      {isError && <ErrorMessage />}
+      {isLoading && <p>Loading...</p>}
+      {isError && <p>Error loading notes</p>}
 
-      {!isLoading && !isError && (
-        <MovieGrid movies={movies} onSelect={handleSelectMovie} />
+      {data && (
+        <>
+          <Pagination
+            totalPages={data.totalPages}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
+
+          <NoteList notes={data.notes} onDelete={handleDelete} />
+        </>
       )}
 
-      {selectedMovie && (
-        <MovieModal movie={selectedMovie} onClose={handleCloseModal} />
+      {isModalOpen && (
+        <NoteModal
+          onClose={() => {
+            setIsModalOpen(false);
+            queryClient.invalidateQueries({
+              queryKey: ["notes", currentPage, debouncedSearchTerm],
+            });
+          }}
+        />
       )}
-      <Toaster position="top-center" reverseOrder={false} />
     </div>
   );
 }
